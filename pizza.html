@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pixel Pizza</title>
+
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: #171421;
+  font-family: monospace;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+}
+
+#game {
+  width: 100%;
+  height: 100dvh;
+  max-width: 1100px;
+  margin: auto;
+  background: #292237;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#hud {
+  height: 52px;
+  min-height: 52px;
+  background: #38283b;
+  border-bottom: 4px solid #201927;
+  color: white;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: 5px;
+  padding: 0 5px;
+  z-index: 10;
+}
+
+.logo {
+  font-size: 13px;
+  color: #ffd16c;
+  font-weight: bold;
+}
+
+.stat, .inventory {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+#game-area {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  background: #c99c6c;
+}
+
+canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+  touch-action: none;
+}
+
+#order-panel {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 155px;
+  padding: 9px;
+  background: #3b2938;
+  color: white;
+  border: 3px solid #ffd16c;
+  z-index: 5;
+  font-size: 10px;
+  text-align: center;
+  pointer-events: none;
+}
+
+#customerName {
+  color: #ffd16c;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+#orderText {
+  font-size: 12px;
+  margin-bottom: 7px;
+}
+
+.patience-bg {
+  width: 100%;
+  height: 7px;
+  background: #672c34;
+  margin-bottom: 6px;
+}
+
+#patienceBar {
+  width: 100%;
+  height: 100%;
+  background: #69d36b;
+}
+
+#paymentStatus {
+  color: #ffd16c;
+}
+
+#toast {
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 12px;
+  background: #3b2938;
+  border: 2px solid #ffd16c;
+  color: white;
+  font-size: 11px;
+  white-space: nowrap;
+  z-index: 8;
+  pointer-events: none;
+}
+
+#controls {
+  position: absolute;
+  bottom: 15px;
+  left: 0;
+  width: 100%;
+  padding: 0 17px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+#joystick {
+  width: 105px;
+  height: 105px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.18);
+  border: 3px solid rgba(255,255,255,.45);
+  position: relative;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+#stick {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background: #ffd16c;
+  border: 4px solid #9d633e;
+  transform: translate(-50%,-50%);
+}
+
+.right-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  pointer-events: auto;
+}
+
+button {
+  width: 75px;
+  height: 75px;
+  border-radius: 50%;
+  border: 4px solid #75412f;
+  background: #f5a34a;
+  color: #30202a;
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 11px;
+  touch-action: none;
+}
+
+#jumpBtn {
+  background: #78bde0;
+  border-color: #376b94;
+}
+
+button:active {
+  transform: scale(.92);
+  filter: brightness(1.2);
+}
+
+@media (orientation: portrait) {
+  #controls { bottom: 12px; }
+  #joystick { width: 90px; height: 90px; }
+  button { width: 67px; height: 67px; }
+}
+</style>
+</head>
+
+<body>
+
+<div id="game">
+
+  <header id="hud">
+    <div class="logo">🍕 PIXEL PIZZA</div>
+    <div class="stat">💰 $<span id="money">0</span></div>
+    <div class="stat">⭐ <span id="served">0</span></div>
+    <div class="inventory">
+      🍕 <span id="pizzaStock">3</span>
+      🥤 <span id="juiceStock">3</span>
+    </div>
+  </header>
+
+  <div id="game-area">
+
+    <canvas id="canvas" width="800" height="520"></canvas>
+
+    <div id="order-panel">
+      <div id="customerName">CUSTOMER</div>
+      <div id="orderText">Waiting for customer</div>
+      <div class="patience-bg">
+        <div id="patienceBar"></div>
+      </div>
+      <div id="paymentStatus">No active order</div>
+    </div>
+
+    <div id="toast">Welcome to Pixel Pizza!</div>
+
+    <div id="controls">
+      <div class="left-controls">
+        <div id="joystick">
+          <div id="stick"></div>
+        </div>
+      </div>
+
+      <div class="right-controls">
+        <button id="jumpBtn">JUMP</button>
+        <button id="actionBtn">ACTION</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+const W = 800;
+const H = 520;
+
+ctx.imageSmoothingEnabled = false;
+
+let money = 0;
+let served = 0;
+let pizzaStock = 3;
+let juiceStock = 3;
+let toastTimer = 0;
+let gameTime = 0;
+
+let keys = {};
+let joystick = {x: 0};
+
+const player = {
+  x: 330,
+  y: 400,
+  vx: 0,
+  vy: 0,
+  w: 24,
+  h: 38,
+  speed: 190,
+  grounded: false,
+  jumps: 0,
+  maxJumps: 2,
+  facing: 1,
+  carrying: null,
+  walkTime: 0
+};
+
+const platforms = [
+  {x:0,y:465,w:800,h:55},
+  {x:65,y:355,w:175,h:20},
+  {x:285,y:325,w:145,h:20},
+  {x:565,y:355,w:190,h:20},
+  {x:350,y:225,w:145,h:15}
+];
+
+const stations = {
+  prep: {x:150,y:335},
+  oven: {x:355,y:305},
+  juice: {x:480,y:440},
+  window: {x:690,y:335},
+  storage: {x:60,y:440}
+};
+
+let oven = {
+  baking: false,
+  ready: false,
+  timer: 0
+};
+
+let customer = null;
+let customerNumber = 0;
+
+const orderTypes = [
+  {name:"PIZZA",pizza:true,juice:false,price:20},
+  {name:"JUICE",pizza:false,juice:true,price:10},
+  {name:"PIZZA + JUICE",pizza:true,juice:true,price:30}
+];
+
+function newCustomer() {
+  customerNumber++;
+
+  const order = orderTypes[
+    Math.floor(Math.random()*orderTypes.length)
+  ];
+
+  customer = {
+    name:"CUSTOMER "+customerNumber,
+    order,
+    paid:false,
+    deliveredPizza:false,
+    deliveredJuice:false,
+    patience:100,
+    maxPatience:100
+  };
+
+  updateOrderUI();
+  showMessage("A new customer has arrived!");
+}
+
+function updateOrderUI() {
+  if (!customer) return;
+
+  document.getElementById("customerName").textContent =
+    customer.name;
+
+  document.getElementById("orderText").textContent =
+    customer.order.name;
+
+  document.getElementById("paymentStatus").textContent =
+    customer.paid
+      ? "PAYMENT RECEIVED"
+      : "$"+customer.order.price+" - COLLECT PAYMENT";
+}
+
+function updateHUD() {
+  document.getElementById("money").textContent = money;
+  document.getElementById("served").textContent = served;
+  document.getElementById("pizzaStock").textContent = pizzaStock;
+  document.getElementById("juiceStock").textContent = juiceStock;
+}
+
+function showMessage(msg) {
+  document.getElementById("toast").textContent = msg;
+  toastTimer = 2.5;
+}
+
+function distance(a,b) {
+  return Math.hypot(a.x-b.x,a.y-b.y);
+}
+
+function jump() {
+  if (player.jumps >= 2) return;
+
+  player.vy = player.jumps === 0 ? -390 : -340;
+  player.jumps++;
+  player.grounded = false;
+}
+
+function updatePhysics(dt) {
+  let oldY = player.y;
+
+  player.x += player.vx * dt;
+
+  player.x = Math.max(
+    12,
+    Math.min(W-player.w-12,player.x)
+  );
+
+  player.y += player.vy * dt;
+  player.vy += 950 * dt;
+
+  player.grounded = false;
+
+  for (const p of platforms) {
+    const overlapsX =
+      player.x+player.w > p.x &&
+      player.x < p.x+p.w;
+
+    const crossedTop =
+      oldY+player.h <= p.y &&
+      player.y+player.h >= p.y;
+
+    if (overlapsX && crossedTop && player.vy >= 0) {
+      player.y = p.y-player.h;
+      player.vy = 0;
+      player.grounded = true;
+      player.jumps = 0;
+    }
+  }
+
+  if (player.y+player.h > H) {
+    player.y = H-player.h;
+    player.vy = 0;
+    player.grounded = true;
+    player.jumps = 0;
+  }
+}
+
+function action() {
+  const playerCenter = {
+    x:player.x+player.w/2,
+    y:player.y+player.h/2
+  };
+
+  // Collect payment first
+  if (
+    customer &&
+    !customer.paid &&
+    distance(playerCenter,stations.window)<100
+  ) {
+    customer.paid = true;
+    money += customer.order.price;
+    updateHUD();
+    updateOrderUI();
+    showMessage("Payment collected! $"+customer.order.price);
+    return;
+  }
+
+  if (customer && !customer.paid) {
+    showMessage("Collect payment at the window first!");
+    return;
+  }
+
+  // Collect raw pizza
+  if (
+    customer &&
+    customer.order.pizza &&
+    !customer.deliveredPizza &&
+    !player.carrying &&
+    distance(playerCenter,stations.prep)<105
+  ) {
+    if (pizzaStock <= 0) {
+      showMessage("No pizza stock! Visit storage.");
+      return;
+    }
+
+    if (oven.baking) {
+      showMessage("The oven is busy!");
+      return;
+    }
+
+    if (oven.ready) {
+      showMessage("Collect the baked pizza first!");
+      return;
+    }
+
+    pizzaStock--;
+    player.carrying = "rawPizza";
+    updateHUD();
+    showMessage("Raw pizza collected!");
+    return;
+  }
+
+  // Put pizza in oven
+  if (
+    player.carrying === "rawPizza" &&
+    distance(playerCenter,stations.oven)<110
+  ) {
+    player.carrying = null;
+    oven.baking = true;
+    oven.timer = 5;
+    showMessage("Pizza baking! 5 seconds.");
+    return;
+  }
+
+  // Collect baked pizza
+  if (
+    !player.carrying &&
+    oven.ready &&
+    distance(playerCenter,stations.oven)<110
+  ) {
+    player.carrying = "bakedPizza";
+    oven.ready = false;
+    showMessage("Baked pizza collected!");
+    return;
+  }
+
+  // Collect juice
+  if (
+    customer &&
+    customer.order.juice &&
+    !customer.deliveredJuice &&
+    !player.carrying &&
+    distance(playerCenter,stations.juice)<105
+  ) {
+    if (juiceStock <= 0) {
+      showMessage("No juice stock! Visit storage.");
+      return;
+    }
+
+    juiceStock--;
+    player.carrying = "juice";
+    updateHUD();
+    showMessage("Juice collected!");
+    return;
+  }
+
+  // Deliver pizza
+  if (
+    customer &&
+    customer.paid &&
+    player.carrying === "bakedPizza" &&
+    customer.order.pizza &&
+    !customer.deliveredPizza &&
+    distance(playerCenter,stations.window)<110
+  ) {
+    customer.deliveredPizza = true;
+    player.carrying = null;
+    showMessage("Pizza delivered!");
+    checkOrderComplete();
+    return;
+  }
+
+  // Deliver juice
+  if (
+    customer &&
+    customer.paid &&
+    player.carrying === "juice" &&
+    customer.order.juice &&
+    !customer.deliveredJuice &&
+    distance(playerCenter,stations.window)<110
+  ) {
+    customer.deliveredJuice = true;
+    player.carrying = null;
+    showMessage("Juice delivered!");
+    checkOrderComplete();
+    return;
+  }
+
+  // Refill stock
+  if (distance(playerCenter,stations.storage)<100) {
+    if (pizzaStock===3 && juiceStock===3) {
+      showMessage("Your stock is already full!");
+    } else {
+      pizzaStock = 3;
+      juiceStock = 3;
+      updateHUD();
+      showMessage("Stock refilled! Pizza: 3, Juice: 3");
+    }
+    return;
+  }
+
+  showMessage("Nothing to do here!");
+}
+
+function checkOrderComplete() {
+  if (!customer) return;
+
+  const pizzaDone =
+    !customer.order.pizza || customer.deliveredPizza;
+
+  const juiceDone =
+    !customer.order.juice || customer.deliveredJuice;
+
+  if (pizzaDone && juiceDone) {
+    served++;
+    updateHUD();
+
+    showMessage("Order completed! Customer is happy!");
+
+    customer = null;
+
+    setTimeout(() => {
+      if (!customer) newCustomer();
+    },1800);
+  }
+}
+
+function updateCustomer(dt) {
+  if (!customer) return;
+
+  customer.patience -= dt*2.5;
+  customer.patience = Math.max(0,customer.patience);
+
+  const percent =
+    customer.patience/customer.maxPatience*100;
+
+  document.getElementById("patienceBar").style.width =
+    percent+"%";
+
+  document.getElementById("patienceBar").style.background =
+    percent>60 ? "#69d36b" :
+    percent>30 ? "#ffd16c" : "#ed4545";
+
+  if (customer.patience<=0) {
+    showMessage("Customer got angry and left!");
+    customer = null;
+
+    setTimeout(() => {
+      if (!customer) newCustomer();
+    },2000);
+  }
+}
+
+function updateOven(dt) {
+  if (!oven.baking) return;
+
+  oven.timer -= dt;
+
+  if (oven.timer<=0) {
+    oven.timer = 0;
+    oven.baking = false;
+    oven.ready = true;
+    showMessage("PIZZA READY! Collect it!");
+  }
+}
+
+// Keyboard controls
+document.addEventListener("keydown",e => {
+  const key = e.key.toLowerCase();
+
+  if (
+    ["arrowleft","arrowright","arrowup"," ","arrowdown"].includes(key)
+  ) e.preventDefault();
+
+  if (!keys[key]) {
+    if (key===" " || key==="w" || key==="arrowup") jump();
+    if (key==="e" || key==="enter") action();
+  }
+
+  keys[key] = true;
+});
+
+document.addEventListener("keyup",e => {
+  keys[e.key.toLowerCase()] = false;
+});
+
+// Joystick
+const joystickEl = document.getElementById("joystick");
+const stick = document.getElementById("stick");
+
+let joystickActive = false;
+
+joystickEl.addEventListener("pointerdown",e => {
+  e.preventDefault();
+  joystickActive = true;
+  joystickEl.setPointerCapture(e.pointerId);
+  moveJoystick(e);
+});
+
+joystickEl.addEventListener("pointermove",e => {
+  if (joystickActive) moveJoystick(e);
+});
+
+joystickEl.addEventListener("pointerup",resetJoystick);
+joystickEl.addEventListener("pointercancel",resetJoystick);
+
+function moveJoystick(e) {
+  const r = joystickEl.getBoundingClientRect();
+
+  let dx = e.clientX-(r.left+r.width/2);
+  const max = 32;
+
+  dx = Math.max(-max,Math.min(max,dx));
+
+  joystick.x = dx/max;
+  stick.style.left = `calc(50% + ${dx}px)`;
+}
+
+function resetJoystick() {
+  joystickActive = false;
+  joystick.x = 0;
+  stick.style.left = "50%";
+}
+
+// Buttons
+document.getElementById("jumpBtn").addEventListener("pointerdown",e => {
+  e.preventDefault();
+  jump();
+});
+
+document.getElementById("actionBtn").addEventListener("pointerdown",e => {
+  e.preventDefault();
+  action();
+});
+
+// Pixel art drawing
+function rect(x,y,w,h,color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(Math.round(x),Math.round(y),w,h);
+}
+
+function txt(text,x,y,size=12,color="white") {
+  ctx.font = `bold ${size}px monospace`;
+  ctx.fillStyle = color;
+  ctx.fillText(text,x,y);
+}
+
+function drawFloor() {
+  rect(0,0,W,H,"#b9875d");
+
+  for (let x=0;x<W;x+=40) {
+    for (let y=0;y<H;y+=40) {
+      ctx.strokeStyle = "#a87750";
+      ctx.strokeRect(x,y,40,40);
+    }
+  }
+
+  rect(0,0,W,100,"#65463c");
+  rect(0,95,W,8,"#392a30");
+
+  for (let x=30;x<W;x+=110) {
+    rect(x,20,45,35,"#89604c");
+    rect(x+6,26,33,23,"#d9b07c");
+  }
+
+  txt("PIXEL PIZZA",325,78,24,"#ffd16c");
+}
+
+function drawPlatforms() {
+  for (const p of platforms) {
+    rect(p.x,p.y,p.w,p.h,"#70432e");
+    rect(p.x,p.y,p.w,6,"#d49b5e");
+    rect(p.x,p.y+p.h-4,p.w,4,"#402b29");
+  }
+}
+
+function drawPrep() {
+  rect(65,355,175,20,"#75442e");
+  rect(65,355,175,7,"#d29a5b");
+
+  rect(80,375,12,90,"#58372d");
+  rect(210,375,12,90,"#58372d");
+
+  rect(115,330,70,15,"#8b8b83");
+  rect(122,325,56,10,"#e6bc76");
+
+  drawPizza(150,325,false);
+
+  txt("PIZZA PREP",103,315,11,"#ffffff");
+}
+
+function drawPizza(x,y,baked) {
+  rect(x-17,y-11,34,22,"#a66b37");
+  rect(x-14,y-9,28,18,"#e9bd6d");
+  rect(x-11,y-7,22,14,baked?"#d77a36":"#f6dc91");
+  rect(x-7,y-4,5,5,"#d43d35");
+  rect(x+4,y+2,5,5,"#d43d35");
+  rect(x-2,y+1,4,4,"#9b4c2c");
+}
+
+function drawOven() {
+  rect(285,270,145,55,"#5a4444");
+  rect(295,280,125,45,"#352c32");
+  rect(305,290,105,28,"#f17e36");
+
+  rect(315,294,85,20,oven.baking?"#ffb53e":"#8e4028");
+
+  if (oven.baking) {
+    drawPizza(357,305,false);
+    txt(Math.ceil(oven.timer)+"s",336,260,15,"#ffd16c");
+  }
+
+  if (oven.ready) {
+    drawPizza(357,305,true);
+    txt("READY!",330,260,15,"#7aff84");
+  }
+
+  txt("OVEN",335,345,13,"white");
+
+  rect(390,220,25,50,"#65413a");
+  rect(385,215,35,8,"#a77b57");
+
+  if (oven.baking) {
+    const smokeY = 205-Math.sin(gameTime*4)*5;
+    ctx.globalAlpha = .5;
+    rect(395,smokeY,12,12,"#ddd6cf");
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawJuiceStation() {
+  rect(450,425,100,40,"#805038");
+  rect(450,425,100,7,"#d59b5b");
+
+  rect(465,465,10,30,"#593a2e");
+  rect(525,465,10,30,"#593a2e");
+
+  rect(480,385,45,40,"#b6c5c7");
+  rect(487,391,31,25,"#4d91c1");
+  rect(495,397,15,14,"#f8d34d");
+  rect(505,410,16,18,"#8ed4e9");
+  rect(508,405,10,5,"#f8d34d");
+
+  txt("JUICE",480,380,10,"white");
+}
+
+function drawWindow() {
+  rect(565,240,190,115,"#694435");
+  rect(580,250,160,95,"#9acde0");
+  rect(580,315,160,30,"#b47648");
+  rect(565,355,190,20,"#70432e");
+  rect(565,355,190,7,"#e0a66a");
+
+  rect(640,265,35,45,"#f1bf90");
+  rect(636,258,42,12,"#543329");
+  rect(645,278,5,5,"#30232a");
+  rect(665,278,5,5,"#30232a");
+  rect(643,295,25,15,"#e8e5db");
+
+  if (customer) {
+    txt(customer.order.name,615,230,13,"#ffffff");
+
+    if (!customer.paid) {
+      txt("PAY FIRST!",620,220,11,"#ffe06a");
+    }
+  }
+
+  txt("CUSTOMER WINDOW",592,395,12,"white");
+}
+
+function drawStorage() {
+  rect(15,410,75,55,"#79513a");
+  rect(20,415,65,45,"#b47b4d");
+  rect(25,425,25,25,"#70432e");
+  rect(55,425,25,25,"#70432e");
+
+  txt("STORAGE",18,400,10,"white");
+}
+
+function drawPlayer() {
+  const x = Math.round(player.x);
+  const y = Math.round(player.y);
+
+  rect(x+3,y+35,20,4,"#78533a");
+
+  let leg = player.grounded
+    ? Math.sin(player.walkTime*12)*3
+    : 0;
+
+  rect(x+3,y+25+leg,7,12,"#344d79");
+  rect(x+14,y+25-leg,7,12,"#344d79");
+
+  rect(x+1,y+35+leg,10,4,"#42302c");
+  rect(x+13,y+35-leg,10,4,"#42302c");
+
+  rect(x+2,y+12,22,15,"#eee8d9");
+  rect(x-2,y+14,5,12,"#e9b68c");
+  rect(x+23,y+14,5,12,"#e9b68c");
+
+  rect(x+4,y,17,15,"#efbd8c");
+  rect(x+3,y-2,19,6,"#493128");
+
+  rect(player.facing===1?x+16:x+5,y+7,3,3,"#29232a");
+
+  rect(x+3,y-7,20,5,"#ffffff");
+  rect(x+7,y-12,12,6,"#ffffff");
+
+  if (player.carrying==="rawPizza") {
+    drawPizza(x+32,y+15,false);
+  }
+
+  if (player.carrying==="bakedPizza") {
+    drawPizza(x+32,y+15,true);
+  }
+
+  if (player.carrying==="juice") {
+    rect(x+29,y+8,12,18,"#83d5eb");
+    rect(x+31,y+5,8,4,"#f8d34d");
+  }
+}
+
+function drawGame() {
+  ctx.clearRect(0,0,W,H);
+
+  drawFloor();
+  drawPlatforms();
+  drawPrep();
+  drawOven();
+  drawJuiceStation();
+  drawWindow();
+  drawStorage();
+  drawPlayer();
+}
+
+function update(dt) {
+  gameTime += dt;
+
+  let move = joystick.x;
+
+  if (keys["a"] || keys["arrowleft"]) move = -1;
+  if (keys["d"] || keys["arrowright"]) move = 1;
+
+  player.vx = move*player.speed;
+
+  if (move!==0) {
+    player.facing = move>0 ? 1 : -1;
+    player.walkTime += dt;
+  }
+
+  updatePhysics(dt);
+  updateOven(dt);
+  updateCustomer(dt);
+
+  if (toastTimer>0) {
+    toastTimer -= dt;
+
+    if (toastTimer<=0) {
+      document.getElementById("toast").textContent = "";
+    }
+  }
+}
+
+let lastTime = 0;
+
+function loop(timestamp) {
+  let dt = (timestamp-lastTime)/1000;
+  lastTime = timestamp;
+  dt = Math.min(dt||0,.04);
+
+  update(dt);
+  drawGame();
+
+  requestAnimationFrame(loop);
+}
+
+updateHUD();
+newCustomer();
+requestAnimationFrame(loop);
+</script>
+
+</body>
+</html>
